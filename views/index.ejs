@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Expense Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3348;
+      --accent: #6c8aff;
+      --accent2: #43d9ad;
+      --danger: #ff6b6b;
+      --text: #e8eaf0;
+      --muted: #8891b0;
+      --font: 'DM Sans', sans-serif;
+      --mono: 'DM Mono', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1.2rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    header h1 { font-size: 1.3rem; font-weight: 600; letter-spacing: -0.02em; }
+    header span { background: var(--accent); color: #fff; font-size: .7rem; padding: .2rem .5rem; border-radius: 4px; font-weight: 600; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+    /* Stats row */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.5rem;
+    }
+    .stat-card .label { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .4rem; }
+    .stat-card .value { font-size: 1.8rem; font-weight: 600; font-family: var(--mono); color: var(--accent2); }
+
+    /* Category pills */
+    .categories { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 2rem; }
+    .cat-pill {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: .3rem .9rem;
+      font-size: .78rem;
+      color: var(--muted);
+    }
+    .cat-pill strong { color: var(--text); }
+
+    /* Main layout */
+    .main-grid { display: grid; grid-template-columns: 1fr 360px; gap: 1.5rem; }
+    @media (max-width: 860px) { .main-grid { grid-template-columns: 1fr; } }
+
+    /* Expense list */
+    .expense-list { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .expense-list h2 { padding: 1.2rem 1.5rem; font-size: .9rem; font-weight: 600; border-bottom: 1px solid var(--border); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .expense-item {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+    .expense-item:hover { background: var(--surface2); }
+    .expense-item:last-child { border-bottom: none; }
+    .expense-title { font-weight: 500; font-size: .95rem; }
+    .expense-meta { font-size: .75rem; color: var(--muted); margin-top: .2rem; }
+    .expense-amount { font-family: var(--mono); font-weight: 500; color: var(--accent2); white-space: nowrap; }
+    .badge {
+      font-size: .7rem;
+      padding: .2rem .55rem;
+      border-radius: 4px;
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: .3rem .4rem;
+      border-radius: 4px;
+      transition: color .15s, background .15s;
+      line-height: 1;
+    }
+    .delete-btn:hover { color: var(--danger); background: rgba(255,107,107,.1); }
+    .bill-link { font-size: .72rem; color: var(--accent); text-decoration: none; display: block; margin-top: .2rem; }
+    .bill-link:hover { text-decoration: underline; }
+    .empty { padding: 2.5rem; text-align: center; color: var(--muted); font-size: .9rem; }
+
+    /* Add form */
+    .add-form { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+    .add-form h2 { font-size: .9rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1.2rem; }
+    .form-group { margin-bottom: 1rem; }
+    label { font-size: .78rem; color: var(--muted); display: block; margin-bottom: .35rem; }
+    input, select, textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: .6rem .85rem;
+      font-family: var(--font);
+      font-size: .9rem;
+      transition: border-color .15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    input[type="file"] { padding: .5rem .85rem; cursor: pointer; }
+    textarea { resize: vertical; min-height: 70px; }
+    select option { background: var(--surface2); }
+    .submit-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: .75rem;
+      font-family: var(--font);
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: .5rem;
+      transition: opacity .15s, transform .1s;
+    }
+    .submit-btn:hover { opacity: .9; }
+    .submit-btn:active { transform: scale(.98); }
+
+    .error-banner {
+      background: rgba(255,107,107,.12);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      font-size: .88rem;
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: .8rem 1.2rem;
+      font-size: .85rem; color: var(--text);
+      transform: translateY(120%); transition: transform .3s;
+      z-index: 100; box-shadow: 0 4px 24px rgba(0,0,0,.4);
+    }
+    #toast.show { transform: translateY(0); }
+    #toast.success { border-color: var(--accent2); color: var(--accent2); }
+    #toast.error { border-color: var(--danger); color: var(--danger); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>💰 Expense Tracker</h1>
+  <span>AWS</span>
+</header>
+
+<div class="container">
+
+  <% if (error) { %>
+    <div class="error-banner">⚠️ <%= error %></div>
+  <% } %>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="label">Total Spent</div>
+      <div class="value">₹<%= total %></div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Total Entries</div>
+      <div class="value"><%= expenses.length %></div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Categories</div>
+      <div class="value"><%= Object.keys(byCategory).length %></div>
+    </div>
+  </div>
+
+  <!-- Category breakdown -->
+  <% if (Object.keys(byCategory).length > 0) { %>
+  <div class="categories">
+    <% for (const [cat, amt] of Object.entries(byCategory).sort((a,b) => b[1]-a[1])) { %>
+      <div class="cat-pill"><strong><%= cat %></strong> — ₹<%= parseFloat(amt).toFixed(2) %></div>
+    <% } %>
+  </div>
+  <% } %>
+
+  <div class="main-grid">
+    <!-- Expense List -->
+    <div class="expense-list">
+      <h2>Recent Expenses</h2>
+      <% if (expenses.length === 0) { %>
+        <div class="empty">No expenses yet. Add your first one →</div>
+      <% } else { %>
+        <% expenses.forEach(exp => { %>
+        <div class="expense-item" id="row-<%= exp.id %>">
+          <div>
+            <div class="expense-title"><%= exp.title %></div>
+            <div class="expense-meta">
+              <span class="badge"><%= exp.category %></span>
+              &nbsp;<%= new Date(exp.date).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) %>
+              <% if (exp.description) { %> · <%= exp.description %><% } %>
+            </div>
+            <% if (exp.bill_url) { %>
+              <a href="<%= exp.bill_url %>" target="_blank" class="bill-link">📎 View Bill</a>
+            <% } %>
+          </div>
+          <div class="expense-amount">₹<%= parseFloat(exp.amount).toFixed(2) %></div>
+          <button class="delete-btn" onclick="deleteExpense(<%= exp.id %>)" title="Delete">✕</button>
+        </div>
+        <% }) %>
+      <% } %>
+    </div>
+
+    <!-- Add Expense Form -->
+    <div class="add-form">
+      <h2>Add Expense</h2>
+      <form action="/expenses" method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+          <label>Title *</label>
+          <input type="text" name="title" placeholder="e.g. Electricity Bill" required/>
+        </div>
+        <div class="form-group">
+          <label>Amount (₹) *</label>
+          <input type="number" name="amount" step="0.01" min="0" placeholder="0.00" required/>
+        </div>
+        <div class="form-group">
+          <label>Category *</label>
+          <select name="category" required>
+            <option value="">Select category...</option>
+            <option>Food</option>
+            <option>Transport</option>
+            <option>Utilities</option>
+            <option>Entertainment</option>
+            <option>Healthcare</option>
+            <option>Shopping</option>
+            <option>Education</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date *</label>
+          <input type="date" name="date" required/>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="description" placeholder="Optional notes..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Bill / Receipt (optional)</label>
+          <input type="file" name="bill" accept="image/*,.pdf"/>
+        </div>
+        <button type="submit" class="submit-btn">+ Add Expense</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// Set today's date as default in the date picker
+document.querySelector('input[type="date"]').valueAsDate = new Date();
+
+// Delete expense via fetch (no page reload)
+async function deleteExpense(id) {
+  if (!confirm('Delete this expense?')) return;
+  try {
+    const res = await fetch(`/expenses/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById(`row-${id}`).remove();
+      showToast('Expense deleted', 'success');
+    } else {
+      showToast(data.error || 'Delete failed', 'error');
+    }
+  } catch (e) {
+    showToast('Network error', 'error');
+  }
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 2500);
+}
+</script>
+</body>
+</html>
