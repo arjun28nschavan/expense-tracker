@@ -22,7 +22,7 @@ app.get('/', (req, res) => {
   res.redirect('/expenses');
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`Expense Tracker running on http://localhost:${PORT}`);
+console.log(`Server running on PORT ${PORT}`);
 });

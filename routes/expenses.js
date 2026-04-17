@@ -3,6 +3,7 @@ const router = express.Router();
 const docClient = require('../config/dynamo');
 const { v4: uuidv4 } = require('uuid');
 const { upload } = require('../config/s3');
+const ExcelJS = require('exceljs');
 
 const { PutCommand, ScanCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
 
@@ -85,6 +86,53 @@ router.delete('/:id', async (req, res) => {
 
   } catch (err) {
     res.json({ error: err.message });
+  }
+});
+
+router.get('/export', async (req, res) => {
+  try {
+    const data = await docClient.send(new ScanCommand({
+      TableName: "expenses"
+    }));
+
+    const expenses = data.Items || [];
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Expenses');
+
+    sheet.columns = [
+      { header: 'Title', key: 'title' },
+      { header: 'Amount', key: 'amount' },
+      { header: 'Category', key: 'category' },
+      { header: 'Subcategory', key: 'subcategory' },
+      { header: 'Date', key: 'date' }
+    ];
+
+    expenses.forEach(e => {
+      sheet.addRow({
+        title: e.title,
+        amount: e.amount,
+        category: e.category,
+        subcategory: e.subcategory || '',
+        date: e.date
+      });
+    });
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=expenses.xlsx'
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (err) {
+    res.status(500).send("Excel export failed");
   }
 });
 
