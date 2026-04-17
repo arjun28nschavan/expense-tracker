@@ -2,13 +2,9 @@ const express = require('express');
 const path = require('path');
 require('dotenv').config();
 
-const { connectDB } = require('./config/db');
 const expenseRoutes = require('./routes/expenses');
 
 const app = express();
-
-// Connect to MongoDB first
-connectDB();
 
 // Middleware
 app.use(express.json());
@@ -22,7 +18,9 @@ app.set('views', path.join(__dirname, 'views'));
 // Routes
 app.use('/expenses', expenseRoutes);
 
-app.get('/', (req, res) => res.redirect('/expenses'));
+app.get('/', (req, res) => {
+  res.redirect('/expenses');
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

@@ -217,7 +217,7 @@
           <div>
             <div class="expense-title"><%= exp.title %></div>
             <div class="expense-meta">
-              <span class="badge"><%= exp.category %></span>
+              <span class="badge"><%= exp.category %> - <%= exp.subcategory %></span>
               &nbsp;<%= new Date(exp.date).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }) %>
               <% if (exp.description) { %> · <%= exp.description %><% } %>
             </div>
@@ -226,7 +226,7 @@
             <% } %>
           </div>
           <div class="expense-amount">₹<%= parseFloat(exp.amount).toFixed(2) %></div>
-          <button class="delete-btn" onclick="deleteExpense(<%= exp.id %>)" title="Delete">✕</button>
+          <button class="delete-btn" onclick="deleteExpense('<%= exp.id %>')" title="Delete">✕</button>
         </div>
         <% }) %>
       <% } %>
@@ -259,6 +259,17 @@
           </select>
         </div>
         <div class="form-group">
+          <label>Subcategory *</label>
+          <select name="subcategory" required>
+            <option value="">Select subcategory...</option>
+            <option>Lunch</option>
+            <option>Dinner</option>
+            <option>Snacks</option>
+            <option>Travel</option>
+            <option>Bills</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>Date *</label>
           <input type="date" name="date" required/>
         </div>
@@ -285,17 +296,20 @@ document.querySelector('input[type="date"]').valueAsDate = new Date();
 // Delete expense via fetch (no page reload)
 async function deleteExpense(id) {
   if (!confirm('Delete this expense?')) return;
+
   try {
     const res = await fetch(`/expenses/${id}`, { method: 'DELETE' });
     const data = await res.json();
+
     if (data.success) {
-      document.getElementById(`row-${id}`).remove();
-      showToast('Expense deleted', 'success');
+      // ✅ simplest fix: reload page
+      location.reload();
     } else {
-      showToast(data.error || 'Delete failed', 'error');
+      alert('Delete failed');
     }
+
   } catch (e) {
-    showToast('Network error', 'error');
+    alert('Network error');
   }
 }
 

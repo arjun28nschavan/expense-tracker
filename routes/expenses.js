@@ -1,98 +1,90 @@
-// routes/expenses.js
-// All expense routes using MongoDB via Mongoose
-
 const express = require('express');
 const router = express.Router();
-const { Expense } = require('../config/db');
-const { upload, deleteFromS3 } = require('../config/s3');
+const docClient = require('../config/dynamo');
+const { v4: uuidv4 } = require('uuid');
+const { upload } = require('../config/s3');
 
-// ─────────────────────────────────────────
-// GET /expenses — fetch all and render homepage
-// ─────────────────────────────────────────
+const { PutCommand, ScanCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
+
+// GET
 router.get('/', async (req, res) => {
   try {
-    // Find all expenses, newest first
-    const expenses = await Expense.find().sort({ date: -1, createdAt: -1 });
+    const data = await docClient.send(new ScanCommand({
+      TableName: "expenses"
+    }));
 
-    // Total amount
+    const expenses = data.Items || [];
+
     const total = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-    // Group by category
-    const byCategory = expenses.reduce((acc, e) => {
-      acc[e.category] = (acc[e.category] || 0) + e.amount;
-      return acc;
-    }, {});
+    const byCategory = {};
+    expenses.forEach(e => {
+      byCategory[e.category] = (byCategory[e.category] || 0) + e.amount;
+    });
 
     res.render('index', {
       expenses,
       total: total.toFixed(2),
       byCategory,
-      error: null,
+      error: null
     });
+
   } catch (err) {
-    console.error('Error fetching expenses:', err);
     res.render('index', {
       expenses: [],
-      total: '0.00',
+      total: "0.00",
       byCategory: {},
-      error: 'Could not load expenses. Check your MongoDB connection.',
+      error: "DynamoDB error"
     });
   }
 });
 
-// ─────────────────────────────────────────
-// POST /expenses — add new expense
-// ─────────────────────────────────────────
+// POST
 router.post('/', upload.single('bill'), async (req, res) => {
   try {
-    const { title, amount, category, date, description } = req.body;
-
-    if (!title || !amount || !category || !date) {
-      return res.status(400).json({ error: 'Title, amount, category, and date are required' });
-    }
+    const { title, amount, category, subcategory, date, description } = req.body;
 
     const billUrl = req.file ? req.file.location : null;
 
-    // Create and save the expense — Mongoose handles everything
-    const expense = new Expense({
-      title,
-      amount: parseFloat(amount),
-      category,
-      date: new Date(date),
-      description: description || '',
-      bill_url: billUrl,
-    });
+    if (!title || !amount || !category || !date) {
+      return res.status(400).json({ error: "All fields required" });
+    }
 
-    await expense.save();
-    console.log(`Expense added: ${title} ₹${amount}`);
+    const newExpense = {
+    id: uuidv4(),
+    title,
+    amount: parseFloat(amount),
+    category,
+    subcategory,
+    date,
+    description: description || "",
+    bill_url: billUrl
+  };
+
+    await docClient.send(new PutCommand({
+      TableName: "expenses",
+      Item: newExpense
+    }));
+
     res.redirect('/expenses');
+
   } catch (err) {
-    console.error('Error adding expense:', err);
-    res.status(500).json({ error: 'Failed to add expense: ' + err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// ─────────────────────────────────────────
-// DELETE /expenses/:id — delete expense
-// ─────────────────────────────────────────
+// DELETE
 router.delete('/:id', async (req, res) => {
   try {
-    const expense = await Expense.findById(req.params.id);
+    await docClient.send(new DeleteCommand({
+      TableName: "expenses",
+      Key: { id: req.params.id }
+    }));
 
-    if (!expense) {
-      return res.status(404).json({ error: 'Expense not found' });
-    }
+    res.json({ success: true });
 
-    // Delete bill from S3 if exists
-    if (expense.bill_url) {
-      await deleteFromS3(expense.bill_url);
-    }
-
-    await Expense.findByIdAndDelete(req.params.id);
-    res.json({ success: true, message: 'Expense deleted' });
   } catch (err) {
-    console.error('Error deleting expense:', err);
-    res.status(500).json({ error: 'Failed to delete: ' + err.message });
+    res.json({ error: err.message });
   }
 });
 
